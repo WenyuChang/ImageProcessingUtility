@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			[Bindable]
+			public var histogram:ArrayCollection;
+			private function horizontalAxisDisplayFunc(categoryValue:Object, previousCategoryValue:Object, axis:CategoryAxis, categoryItem:Object):String
+			{
+				return "";
+			}
+		]]>
+	</mx:Script>
+	<mx:AreaChart id="Areachart" height="100%" width="97%" dataProvider="{histogram}">
+		<mx:horizontalAxis>
+			<mx:CategoryAxis labelFunction="horizontalAxisDisplayFunc"/>
+		</mx:horizontalAxis>
+		<mx:series>
+			<mx:AreaSeries yField="colorCount"/>
+		</mx:series>
+	</mx:AreaChart>
+</mx:HBox>

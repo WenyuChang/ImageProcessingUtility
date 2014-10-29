@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"
+				xmlns:views="com.views.*"
+				xmlns:Component="Component.*"
+				layout="absolute" minWidth="955" minHeight="600"
+			    initialize="init()">
+	<mx:Script>
+		<![CDATA[
+			import Util.*;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.ListEvent;
+			import mx.events.SliderEvent;
+			
+			private var fileReferenceList : FileReferenceList;
+			private var loader : URLLoader;
+			private var fileName : String;
+			private var decoder : BMPDecoder;
+			
+			[Bindable]
+			private var bitmapData : BitmapData;
+			[Bindable]
+			private var bitmap : Bitmap;
+			[Bindable]
+			private var currentBitmap : Bitmap;
+			[Bindable]
+			private var currentBitmapData : BitmapData;
+			[Bindable]
+			private var histogramData:ArrayCollection = new ArrayCollection();
+			[Bindable]
+			private var histogramDataCurrent:ArrayCollection = new ArrayCollection();
+
+			[Bindable]
+			public var picList:ArrayCollection = new ArrayCollection(
+				[ {label:"Lena"}, {label:"LenaNoise"}, {label:"blood"}, {label:"bacteria"}, {label:"QQ"},{label:"test1"} ]);
+
+			
+			private function init():void
+			{
+				loader = new URLLoader();
+				fileReferenceList = new FileReferenceList();
+//				fileReferenceList.addEventListener(Event.SELECT, selectedBMPFile);
+			}
+			
+			private function selectedBMPFile(name:String):void
+			{
+//				fileName = (fileReferenceList.fileList[0] as FileReference).name;
+				loader.dataFormat = URLLoaderDataFormat.BINARY;
+				loader.addEventListener(Event.COMPLETE, onCompleteLoad);
+//				loader.load( new URLRequest("images/"+fileName) );
+				loader.load( new URLRequest("images/"+name) );
+			}
+			
+			private function loadBMPFile(event:ListEvent):void
+			{
+//				fileReferenceList.browse([new FileFilter("BMP Images","*.bmp")]);
+				selectedBMPFile(picNameList.selectedItem.label+".bmp");
+			}
+			
+			private function onCompleteLoad(e:Event):void
+			{
+				var loader:URLLoader = e.target as URLLoader;
+				decoder = new BMPDecoder();
+				bitmapData = ImageAlgorithm.grayScale(decoder.decode(loader.data), 0);
+				currentBitmapData = ImageAlgorithm.grayScale(decoder.decode(loader.data), 0);
+				bitmap = new Bitmap(bitmapData,"auto",true);
+				img.source = bitmap;
+				currentBitmap = new Bitmap(currentBitmapData,"auto",true);
+				handledImg.source = currentBitmap;
+				
+				histogramData = ImageAlgorithm.getHisData(bitmapData);
+				histogramDataCurrent = ImageAlgorithm.getHisData(bitmapData);
+				
+				imageInfo.text = decoder.getInfo();
+				illumination.enabled = true;
+			}
+			
+			private function showPic():void
+			{
+				currentBitmap = new Bitmap(currentBitmapData,"auto",true);
+				histogramDataCurrent = ImageAlgorithm.getHisData(currentBitmapData);
+				handledImg.source = currentBitmap;
+				illumination.enabled = true;
+			}
+			
+			private function processType(type:String):void
+			{
+				if(checkIfLoad())
+				{
+					Alert.show("Please choose the BMP file first...!!");
+					return;
+				}
+				switch(type)
+				{
+					case "Histogram Equalization" :
+						currentBitmapData = ImageAlgorithm.histogram(currentBitmapData);
+						showPic();
+						break;
+					case "Median Filter" :
+						currentBitmapData = ImageAlgorithm.median(currentBitmapData);
+						showPic();
+						break;
+					case "Mean Filter" :
+						currentBitmapData = ImageAlgorithm.mean(currentBitmapData);
+						showPic();
+						break;
+					case "Threshold Segmentation" :
+						currentBitmapData = ImageAlgorithm.thresholdSegmentation(currentBitmapData, Threshold_E.value);
+						showPic();
+						Threshold.text = "  Threshold Value: " + ImageAlgorithm.k;
+						break;
+					case "Otsu":
+						currentBitmapData = ImageAlgorithm.otsu(currentBitmapData);
+						showPic();
+						Threshold.text = "  Threshold Value: " + ImageAlgorithm.k;
+						break;
+					case "Roberts Operator":
+						currentBitmapData = ImageAlgorithm.roberts(currentBitmapData);
+						showPic();
+						break;
+					case "Prewitt Operator":
+						currentBitmapData = ImageAlgorithm.prewitt(currentBitmapData);
+						showPic();
+						break;
+					case "Sobel Operator":
+						currentBitmapData = ImageAlgorithm.sobel(currentBitmapData);
+						showPic();
+						break;
+					case "Log Operator":
+						currentBitmapData = ImageAlgorithm.laplace(currentBitmapData);
+						showPic();
+						break;
+					case "Revert" :
+						currentBitmapData = bitmapData;
+						currentBitmap = new Bitmap(bitmapData,"auto",true);
+						histogramDataCurrent = ImageAlgorithm.getHisData(bitmapData);
+						handledImg.source = currentBitmap;
+						illumination.value = 0;
+						if(Threshold!=null)
+							Threshold.text = "  Threshold Value: ";
+						break;
+				}		
+			}
+			
+			private function checkIfLoad():Boolean
+			{
+				if(bitmapData==null)
+					return true;
+				else
+					return false;
+			}
+
+
+			protected function illumination_changeHandler(event:SliderEvent):void
+			{
+				currentBitmapData = ImageAlgorithm.grayScale(decoder.decode(loader.data), illumination.value);
+				showPic();
+			}
+
+		]]>
+	</mx:Script>
+	
+	<mx:Style source="assets/css/Main.css" />
+	
+	<mx:Panel  id="backgroundPannel"
+			   horizontalAlign="left" verticalAlign="middle"
+			   width="900" height="650"
+			   title="Digital Image"
+			   horizontalCenter="0" verticalCenter="0">
+		<mx:VBox height="100%" width="100%">
+			<mx:HBox width="100%" height="100%">
+				<mx:Panel width="30%" height="100%" x="0" y="0" horizontalAlign="center">
+					<mx:HBox x="10" y="0" width="93%" height="184" borderThickness="3" borderStyle="solid">
+						<mx:Image x="0" y="0" width="100%" height="100%" id="img" horizontalAlign="center"/>
+					</mx:HBox>
+					<mx:HBox>
+						<mx:ComboBox id="picNameList" width="130" dataProvider="{picList}" selectedIndex="-1" change="loadBMPFile(event)"/>
+						<!--<mx:Button label="Load Image" click="loadBMPFile()"/>-->
+						<mx:Button width="90" label="Revert" click="processType('Revert');"/>	
+					</mx:HBox>
+					<mx:HRule width="100%"/>
+					<mx:HBox width="100%" height="20%" horizontalAlign="left">
+						<Component:HistogramAreaChart histogram="{histogramData}" />
+					</mx:HBox>
+					<mx:HRule width="100%" height="10"/>
+					<mx:Label width="100%" height="100%" id="imageInfo" />
+				</mx:Panel>
+				
+				
+				<mx:VBox width="70%" height="100%" horizontalAlign="center" verticalAlign="middle">				
+					<mx:Panel title="Image Handled" width="100%" height="100%">
+						<mx:Image width="100%" height="100%" id="handledImg" horizontalAlign="center"/>
+					</mx:Panel>
+					<mx:HRule width="100%" />
+					
+					<Component:HistogramAreaChart width="100%" height="20%" histogram="{histogramDataCurrent}" />
+					<mx:HSlider id="illumination" width="80%" height="5" minimum="-100" maximum="100" value="0" change="illumination_changeHandler(event)" enabled="false"/>
+					<mx:HBox width="100%" height="10%"
+							 paddingBottom="0" paddingLeft="0" paddingRight="0" paddingTop="0">
+						<mx:TabNavigator width="100%" height="100%" horizontalAlign="center" borderThickness="0"
+										 paddingBottom="3" paddingLeft="0" paddingRight="0" paddingTop="3">
+							<mx:VBox label="Histogram Equalization" width="100%" height="100%" verticalAlign="middle" horizontalAlign="center">
+								<mx:Button label="Execute HE" click="processType('Histogram Equalization');"/>
+							</mx:VBox>
+							<mx:VBox label="Smooth" width="100%" height="100%" verticalAlign="middle" horizontalAlign="center">
+								<mx:HBox>
+									<mx:Button label="Mean Filter" click="processType('Mean Filter');"/>
+									<mx:Button label="Median Filter" click="processType('Median Filter');"/>
+								</mx:HBox>
+							</mx:VBox>
+							<mx:VBox label="Threshold Segmentation" width="100%" height="100%"
+									 verticalAlign="middle" horizontalAlign="center" verticalGap="0">
+								<mx:HBox height="100%" width="100%" horizontalAlign="center" verticalAlign="middle">
+									<mx:Label id="Threshold" text="  Threshold Value: " width="25%"/>
+									<mx:VRule height="90%" />
+									<mx:HBox width="60%" height="100%" horizontalAlign="center" verticalAlign="middle" paddingLeft="5">
+										<mx:HSlider id="Threshold_E" width="50%" minimum=".5" maximum="10"/>
+										<mx:Button label="Threshold Segmentation" click="processType('Threshold Segmentation');" height="21"/>
+									</mx:HBox>
+									<mx:VRule height="90%" />
+									<mx:Button label="Otsu" click="processType('Otsu');" width="70" height="21"/>
+								</mx:HBox>
+							</mx:VBox>
+							<mx:HBox label="Edge Detection" width="100%" height="100%"
+									 verticalAlign="middle" horizontalAlign="center" verticalGap="0">
+								<mx:Button label="Roberts Operator" click="processType('Roberts Operator');" height="21"/>
+								<mx:Button label="Prewitt Operator" click="processType('Prewitt Operator');" height="21"/>
+								<mx:Button label="Sobel Operator" click="processType('Sobel Operator');" height="21"/>
+								<mx:Button label="Log Operator" click="processType('Log Operator');" height="21"/>
+							</mx:HBox>
+						</mx:TabNavigator>
+					</mx:HBox>
+				</mx:VBox>
+			</mx:HBox>
+		</mx:VBox>
+		
+	</mx:Panel>
+</mx:Application>
