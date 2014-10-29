@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="vertical" width="640" height="480" title="灰度分布!!!"
+	close="closeMe()" showCloseButton="true" x="100" y="100" creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+			import mx.core.UIComponent;
+			import mx.collections.ArrayCollection;		
+			import mx.managers.PopUpManager;
+			import flash.display.BitmapData;
+			
+			[Bindable]
+			public var source : BitmapData;
+			[Bindable]
+			private var pexil : ArrayCollection = new ArrayCollection();
+			
+			private function closeMe():void
+			{
+				PopUpManager.removePopUp(this);
+				dispatchEvent(new Event("popupClose",false) );
+			}
+			
+			private function init() : void
+			{
+				var array : Array = new Array(256);
+				for (var i : uint = 0; i < array.length; i++)
+				{
+					array[i] = 0;
+				}
+				for (i = 0; i < source.width; i++)
+		     	{
+		    		for(var j : uint = 0; j < source.height; j++)
+		         	{
+		      			var gray : uint = source.getPixel(i,j) >> 16;
+		         		array[gray]++;
+		         		
+		         	}
+		     	}
+		     	for (i = 0; i < 256; i++)
+		     	{
+		     		var t : Object = new Object();
+		     		t.label = i;
+		     		t.data = array[i];
+		     		pexil.addItem(t);
+		     	}
+			}	
+		]]>
+	</mx:Script>
+	<mx:Legend dataProvider="{columnchart1}"/>
+	<mx:ColumnChart id="columnchart1" dataProvider="{pexil}"
+			height="90%" 
+            width="90%" 
+            paddingLeft="5" 
+            paddingRight="5" 
+            showDataTips="true"  
+			creationCompleteEffect="showEffects"
+        	hideEffect="hideEffects"
+        	showEffect="showEffects">
+		<mx:series>
+			<mx:ColumnSeries displayName="灰度值" yField="data" xField="label"/>
+		</mx:series>
+	</mx:ColumnChart>
+	
+	
+	<!-- Define custom colors for use as fills. -->
+    <mx:SolidColor id="sc1" color="yellow" alpha=".8"/>
+    <mx:SolidColor id="sc2" color="0xCCCCCC" alpha=".6"/>
+    <mx:SolidColor id="sc3" color="0xFFCC66" alpha=".6"/>
+
+    <!-- Define custom Strokes for the columns. -->
+    <mx:Stroke id="s1" color="yellow" weight="2"/>
+    <mx:Stroke id="s2" color="0xCCCCCC" weight="2"/>
+    <mx:Stroke id="s3" color="0xFFCC66" weight="2"/>
+    
+    <!-- Define the effects -->
+	  <mx:Parallel id="showEffects">
+	     <mx:WipeRight duration="2000"/>
+	     <mx:Fade alphaFrom="0" alphaTo="1" duration="4000"/>
+	  </mx:Parallel>
+	
+	  <mx:Parallel id="hideEffects">
+	     <mx:Fade alphaFrom="1" alphaTo="0" duration="2500"/>
+	     <mx:WipeLeft duration="3000"/>
+	  </mx:Parallel>
+	  <mx:SeriesZoom id="effect" duration="1000"/>
+	
+</mx:TitleWindow>

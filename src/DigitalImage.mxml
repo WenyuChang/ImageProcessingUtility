@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" creationComplete="init()">
+	<mx:Style source="css/style.css" />
+	<mx:Script>
+		<![CDATA[
+			import com.neulion.lab.popup.Report;
+			import mx.core.IFlexDisplayObject;
+			import com.neulion.lab.utils.BMPDecoder;
+			import flash.display.Bitmap;
+   			import flash.display.BitmapData;
+			import flash.display.BitmapDataChannel;
+			import com.neulion.lab.utils.ImageAlgorithm;
+			import mx.controls.Image;
+			import com.neulion.lab.popup.PopupWindow;
+			import mx.managers.PopUpManager;
+			import mx.controls.Alert;
+		
+			private var decoder : BMPDecoder;
+	   		private var loader : URLLoader;
+			private var bitmap : Bitmap;
+			private var bitmapData : BitmapData;
+			private var currentBitmapData : BitmapData;
+			
+			private var fileName : String;
+			private var fileReference : FileReference;
+			private var fileReferenceList : FileReferenceList;
+			
+			private var balanceWindow : PopupWindow = new PopupWindow();
+			private var reportWindow : Report;
+			
+			private function init():void
+	    	{
+		    	loader = new URLLoader();
+		    	
+		    	fileReferenceList = new FileReferenceList();
+				fileReferenceList.addEventListener(Event.SELECT, loadBMPFile);
+	    	}
+	    	
+	    	private function loadBMPFile(e:Event):void
+	    	{
+		    	fileName = fileReferenceList.fileList[0].name;
+		    	
+		       	loader.dataFormat = URLLoaderDataFormat.BINARY;
+		      	loader.addEventListener(Event.COMPLETE, onCompleteLoad);
+		      	loader.load( new URLRequest("images/"+fileName) );
+	    	}
+	    			
+	    	private function onCompleteLoad(e:Event):void
+			{
+		   		var loader:URLLoader = e.target as URLLoader;
+		  		decoder = new BMPDecoder();
+		  		
+		 		bitmapData = decoder.decode(loader.data);
+		    	
+		     	bitmap = new Bitmap(bitmapData,"auto",true);
+		  		img.source = bitmap;
+		 	}
+		 	
+		 	private function initBMPFile():void
+			{
+				fileReferenceList.browse([new FileFilter("BMP Images","*.bmp")]);
+		 	}
+		 	
+		 	private function process(image:Image, bitmapData:BitmapData):void
+			{
+//		   		image.graphics.beginBitmapFill(bitmapData);
+//				image.graphics.drawRect(0, 0, bitmapData.width, bitmapData.height);
+//		 		image.graphics.endFill();
+				var handledBitmap : Bitmap = new Bitmap(bitmapData);
+				handledImg.source = handledBitmap;
+			}
+			
+			private function strategy(index : uint) : void
+			{
+				switch(index)
+				{
+					case 1 :
+						ImageAlgorithm.a = 0;
+						ImageAlgorithm.b = 255;
+						ImageAlgorithm.c = c.value;
+						ImageAlgorithm.d = d.value;
+						currentBitmapData = ImageAlgorithm.grayscale(bitmapData);
+						process(handledImg, currentBitmapData);
+						break;
+					case 2 :
+						ImageAlgorithm.k = uint(binaryNum.value);
+						currentBitmapData = ImageAlgorithm.binarization(bitmapData);
+						process(handledImg, currentBitmapData);
+						break;
+					case 3 : 
+						currentBitmapData = ImageAlgorithm.histogram(bitmapData);
+						process(handledImg, currentBitmapData);
+						break;
+					case 4 : 
+						currentBitmapData = ImageAlgorithm.median(bitmapData);
+						process(handledImg, currentBitmapData);
+						break;
+					case 5 :
+						PopUpManager.addPopUp(balanceWindow, this, false);
+						balanceWindow.addEventListener("popupMessage",getWindowData);
+						break;
+					case 6 : 
+						break;
+					case 7 :
+						this.currentBitmapData = ImageAlgorithm.roberts(bitmapData);
+						process(handledImg, this.currentBitmapData);
+						break;
+					case 8 :
+						this.currentBitmapData = ImageAlgorithm.prewitt(bitmapData);
+						process(handledImg, this.currentBitmapData);
+						break;
+					case 9 :
+						this.currentBitmapData = ImageAlgorithm.laplace(bitmapData);
+						process(handledImg, this.currentBitmapData);
+						break;
+						
+				}				
+			}
+			
+			public function getWindowData(event:Event):void
+			{
+				switch(balanceWindow.balanceParemeter)
+				{
+					case 1 :
+						currentBitmapData = ImageAlgorithm.box3(bitmapData);
+						process(handledImg, currentBitmapData);
+						break;
+					case 2 :
+						currentBitmapData = ImageAlgorithm.box5(bitmapData);
+						process(handledImg, currentBitmapData);
+						break;
+				}
+			}
+			
+			private function getReport() : void
+			{
+				reportWindow = new Report();
+				reportWindow.source = this.currentBitmapData;
+				PopUpManager.addPopUp(reportWindow, this, false);
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Panel width="640" height="600" layout="absolute" title="Digital Image" left="0" top="0">
+		<mx:Image x="40" y="10" width="570" height="540" id="handledImg" click="getReport()"/>
+	</mx:Panel>
+	<mx:Panel x="648" y="0" width="206" height="600" layout="absolute" title="Control Panel">
+		<mx:Image x="0" y="0" width="186" height="184" id="img"/>
+		<mx:Button x="46" y="192" label="Load Image" click="initBMPFile()"/>
+		<mx:Accordion x="4.5" y="222" width="177" height="286">
+			<mx:Canvas label="灰度变化" width="100%" height="100%">
+				<mx:FormItem label="域值c：" y="10" x="31">
+					<mx:NumericStepper stepSize="10" id="c" minimum="0" maximum="250" value="30"/>
+				</mx:FormItem>
+				<mx:FormItem label="域值d：" y="40" x="31">
+					<mx:NumericStepper stepSize="10" id="d" minimum="0" maximum="250" value="100"/>
+				</mx:FormItem>
+				<mx:Button label="生成图像" click="strategy(1);" bottom="4" horizontalCenter="0"/>
+			</mx:Canvas>
+			<mx:Canvas label="中值滤波" width="100%" height="100%">
+				<mx:Button label="生成图像" right="55" bottom="10" click="strategy(4)"/>
+			</mx:Canvas>
+			<mx:Canvas label="二值化" width="100%" height="100%">
+				<mx:Button label="生成图像" click="strategy(2);" bottom="10" horizontalCenter="0"/>
+				
+				<mx:FormItem label="域值：" horizontalCenter="-31" top="10">
+					<mx:NumericStepper stepSize="20" id="binaryNum" minimum="20" maximum="240"/>
+				</mx:FormItem>
+				
+			</mx:Canvas>
+			<mx:Canvas label="直方图均衡化" width="100%" height="100%">
+				<mx:Button label="生成图片" click="strategy(3);" bottom="10" horizontalCenter="0"/>
+			</mx:Canvas>
+			<mx:Canvas label="领域平均法" width="100%" height="100%">
+				<mx:Button label="生成图片" horizontalCenter="0" bottom="10" click="strategy(5)"/>
+			</mx:Canvas>
+			<mx:Canvas label="Roberts算子" width="100%" height="100%">
+				<mx:Button label="生成图像" horizontalCenter="0" bottom="10" click="strategy(7)"/>
+			</mx:Canvas>
+			<mx:Canvas label="Prewitt算子" width="100%" height="100%">
+				<mx:Button label="生成图像" horizontalCenter="2" bottom="10" click="strategy(8)"/>
+			</mx:Canvas>
+			<mx:Canvas label="Log算子" width="100%" height="100%">
+				<mx:Button label="生成图片" horizontalCenter="2" bottom="10" click="strategy(9)"/>
+			</mx:Canvas>
+		</mx:Accordion>
+	</mx:Panel>
+
+</mx:Application>
